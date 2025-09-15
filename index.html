@@ -3,29 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Generator</title>
+    <title>Interactive Password Generator</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Password Generator</h1>
-        <p class="note">Excludes confusing characters: I, l, 0, O, 1, &</p>
-        <div class="password-display">
-            <input type="text" id="password" readonly placeholder="Generated Password">
-            <button id="copy-btn">Copy</button>
+        <h1>Interactive Password Generator</h1>
+        <p class="note">Excludes confusing characters in random mode: I, l, 0, O, 1, &</p>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="random">Random Characters</button>
+            <button class="tab-btn" data-tab="words">Word-Based Passphrase</button>
         </div>
-        <div class="options">
-            <label>Password Length: <span id="length-value">8</span></label>
-            <input type="range" id="length-slider" min="4" max="20" value="8">
-            <div class="checkboxes">
-                <label><input type="checkbox" id="uppercase" checked> Include Uppercase</label>
-                <label><input type="checkbox" id="lowercase" checked> Include Lowercase</label>
-                <label><input type="checkbox" id="numbers" checked> Include Numbers</label>
-                <label><input type="checkbox" id="symbols"> Include Symbols</label>
+        
+        <div id="random-tab" class="tab-content active">
+            <div class="password-display">
+                <input type="text" id="password-random" readonly placeholder="Generated Password">
+                <button id="copy-btn-random" title="Copy to clipboard">Copy</button>
             </div>
-            <button id="generate-btn">Generate Password</button>
+            <div class="options">
+                <label>Length: <span id="length-value-random">8</span> <span class="tooltip">(4-20 characters)</span></label>
+                <input type="range" id="length-slider-random" min="4" max="20" value="8">
+                <div class="checkboxes">
+                    <label><input type="checkbox" id="uppercase" checked> Uppercase</label>
+                    <label><input type="checkbox" id="lowercase" checked> Lowercase</label>
+                    <label><input type="checkbox" id="numbers" checked> Numbers</label>
+                    <label><input type="checkbox" id="symbols"> Symbols</label>
+                </div>
+                <button id="generate-btn-random">Generate</button>
+                <button id="regenerate-btn-random" class="secondary-btn">Regenerate</button>
+            </div>
+            <div class="strength-bar">
+                <div id="strength-fill-random"></div>
+            </div>
+            <div id="strength-indicator-random">Strength: Medium</div>
         </div>
-        <div id="strength-indicator">Strength: Medium</div>
+        
+        <div id="words-tab" class="tab-content">
+            <div class="password-display">
+                <input type="text" id="password-words" readonly placeholder="Generated Passphrase">
+                <button id="copy-btn-words" title="Copy to clipboard">Copy</button>
+            </div>
+            <div class="options">
+                <label>Word Count: <span id="word-count-value">4</span> <span class="tooltip">(4-8 words)</span></label>
+                <input type="range" id="word-count-slider" min="4" max="8" value="4">
+                <div class="checkboxes">
+                    <label><input type="checkbox" id="separators" checked> Add Separators (- or _)</label>
+                    <label><input type="checkbox" id="add-numbers"> Add Numbers</label>
+                    <label><input type="checkbox" id="capitalize"> Capitalize Words</label>
+                </div>
+                <button id="generate-btn-words">Generate</button>
+                <button id="regenerate-btn-words" class="secondary-btn">Regenerate</button>
+            </div>
+            <div class="strength-bar">
+                <div id="strength-fill-words"></div>
+            </div>
+            <div id="strength-indicator-words">Strength: Medium</div>
+        </div>
+        
+        <div id="toast">Copied!</div>
     </div>
     <script src="script.js"></script>
 </body>
