@@ -124,6 +124,20 @@ label:hover .tooltip {
     margin-bottom: 10px;
 }
 
+#words-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    resize: none;
+    transition: border-color 0.3s;
+}
+
+#words-input:focus {
+    border-color: #007bff;
+}
+
 .checkboxes label {
     display: block;
     text-align: left;
