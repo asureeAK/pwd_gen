@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => toast.classList.remove('show'), 2000);
     }
 
-    // Random Characters Mode
+    // Random Characters Mode (unchanged from previous)
     const passwordRandom = document.getElementById('password-random');
     const copyBtnRandom = document.getElementById('copy-btn-random');
     const generateBtnRandom = document.getElementById('generate-btn-random');
@@ -35,11 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const strengthFillRandom = document.getElementById('strength-fill-random');
     const strengthIndicatorRandom = document.getElementById('strength-indicator-random');
 
-    // Character sets excluding I, l, 0, O, 1, &
     const uppercaseChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     const lowercaseChars = 'abcdefghijkmnopqrstuvwxyz';
     const numberChars = '23456789';
-    const symbolChars = '@#$%^*()_+-=[]{}|;:,./<>?'; // Excludes &
+    const symbolChars = '@#$%^*()_+-=[]{}|;:,./<>?';
 
     lengthSliderRandom.addEventListener('input', () => {
         lengthValueRandom.textContent = lengthSliderRandom.value;
@@ -65,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         passwordRandom.value = password;
-        updateStrength('random', length, charSet.length / 4); // Approximate types by charset diversity
+        updateStrength('random', length, charSet.length / 4);
     }
 
     generateBtnRandom.addEventListener('click', generateRandomPassword);
@@ -78,11 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Word-Based Passphrase Mode
+    // Word-Based Passphrase Mode with User Input
     const passwordWords = document.getElementById('password-words');
     const copyBtnWords = document.getElementById('copy-btn-words');
     const generateBtnWords = document.getElementById('generate-btn-words');
     const regenerateBtnWords = document.getElementById('regenerate-btn-words');
+    const wordsInput = document.getElementById('words-input');
     const wordCountSlider = document.getElementById('word-count-slider');
     const wordCountValue = document.getElementById('word-count-value');
     const separatorsChk = document.getElementById('separators');
@@ -91,24 +91,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const strengthFillWords = document.getElementById('strength-fill-words');
     const strengthIndicatorWords = document.getElementById('strength-indicator-words');
 
-    // Sample word list (expandable; based on common Diceware-style words)
-    const wordList = [
-        'apple', 'banana', 'cherry', 'date', 'elder', 'fig', 'grape', 'honey', 'iris', 'jazz',
-        'kiwi', 'lemon', 'mango', 'nectar', 'olive', 'peach', 'quince', 'rasp', 'straw', 'tanger',
-        'uva', 'vanilla', 'walnut', 'xylophone', 'yam', 'zest', 'aurora', 'breeze', 'cascade', 'dawn',
-        'echo', 'flame', 'galaxy', 'horizon', 'island', 'jungle', 'kale', 'lagoon', 'meadow', 'nebula'
-    ];
+    // Default fallback word list
+    const defaultWordList = ['apple', 'banana', 'cherry', 'date', 'elder', 'fig', 'grape', 'honey'];
 
     wordCountSlider.addEventListener('input', () => {
         wordCountValue.textContent = wordCountSlider.value;
     });
 
     function generateWordPassphrase() {
+        let userWords = wordsInput.value.trim().split(/[\s,]+/).filter(word => word.length > 0);
+        
+        if (userWords.length === 0) {
+            showToast('Using default words - enter your own for customization!');
+            userWords = defaultWordList;
+        }
+
+        if (userWords.length < parseInt(wordCountSlider.value)) {
+            showToast('Not enough words provided - repeating some!');
+        }
+
         const wordCount = parseInt(wordCountSlider.value);
         let passphrase = [];
         
         for (let i = 0; i < wordCount; i++) {
-            let word = wordList[Math.floor(Math.random() * wordList.length)];
+            let word = userWords[Math.floor(Math.random() * userWords.length)];
             if (capitalizeChk.checked) word = word.charAt(0).toUpperCase() + word.slice(1);
             passphrase.push(word);
         }
@@ -126,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         passwordWords.value = passphrase;
-        updateStrength('words', wordCount * 5, wordCount); // Approximate by length and count
+        updateStrength('words', passphrase.length, wordCount);
     }
 
     generateBtnWords.addEventListener('click', generateWordPassphrase);
