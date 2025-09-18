@@ -4,45 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Interactive Password Generator</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .container { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.1); width: 380px; text-align: center; }
-    h1 { margin: 0 0 10px; }
-    .note { font-size: 12px; color: #666; margin-bottom: 16px; }
-    .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
-    .tab-btn { flex: 1; padding: 10px; border: none; background: #ddd; cursor: pointer; border-radius: 6px; }
-    .tab-btn.active { background: #007bff; color: #fff; }
-    .tab-content { display: none; animation: fade .25s ease; }
-    .tab-content.active { display: block; }
-    @keyframes fade { from {opacity: 0} to {opacity: 1} }
-
-    .password-display { display: flex; gap: 8px; margin: 14px 0; }
-    .password-display input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-    .password-display button { padding: 10px 12px; border: none; background: #007bff; color: #fff; border-radius: 6px; cursor: pointer; }
-    .password-display button:hover { background: #0056b3; }
-
-    .options { text-align: left; }
-    .options label { display: block; margin: 10px 0 6px; position: relative; }
-    .checkboxes label { display: block; margin: 6px 0; }
-    input[type="range"] { width: 100%; }
-    textarea, input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-    textarea { resize: none; }
-
-    .btns { margin-top: 10px; display: flex; gap: 8px; }
-    .primary { background: #28a745; color: #fff; border: none; padding: 10px 12px; border-radius: 6px; cursor: pointer; }
-    .primary:hover { background: #218838; }
-    .secondary { background: #6c757d; color: #fff; border: none; padding: 10px 12px; border-radius: 6px; cursor: pointer; }
-    .secondary:hover { background: #5a6268; }
-
-    .strength-bar { height: 6px; background: #e5e5e5; border-radius: 5px; overflow: hidden; margin: 12px 0 6px; }
-    .strength-bar div { height: 100%; width: 0; background: orange; transition: width .4s, background .3s; }
-    .strength { font-weight: 700; color: orange; }
-
-    .hint { font-size: 12px; color: #666; margin-top: 6px; }
-
-    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 16px; border-radius: 6px; opacity: 0; transition: opacity .3s; }
-    #toast.show { opacity: 1; }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
@@ -53,6 +15,7 @@
       <button class="tab-btn active" data-tab="random">Random</button>
       <button class="tab-btn" data-tab="words">Words</button>
       <button class="tab-btn" data-tab="custom">Given Letters</button>
+      <button class="tab-btn" data-tab="db">DB Credentials</button>
     </div>
 
     <!-- Random Characters -->
@@ -135,267 +98,29 @@
       <p class="hint">Tip: If “Avoid duplicate characters” is on, ensure length ≤ count of unique allowed characters.</p>
     </div>
 
+    <!-- DB Credentials -->
+    <div id="db-tab" class="tab-content">
+      <div class="credential-display">
+        <label>DB Username:</label>
+        <input type="text" id="db-username" readonly placeholder="Generated Username" />
+        <button id="copy-username">Copy</button>
+      </div>
+      <div class="credential-display">
+        <label>DB Password:</label>
+        <input type="text" id="db-password" readonly placeholder="Generated Password" />
+        <button id="copy-db-password">Copy</button>
+      </div>
+      <div class="btns">
+        <button id="generate-btn-db" class="primary">Generate</button>
+        <button id="regenerate-btn-db" class="secondary">Regenerate</button>
+      </div>
+      <div class="strength-bar"><div id="strength-fill-db"></div></div>
+      <div id="strength-indicator-db" class="strength">Strength: Medium</div>
+      <p class="hint">Username: Lowercase only, 8-12 chars, random. Password: >12 chars, includes symbols/numbers/uppercase, secure.</p>
+    </div>
+
     <div id="toast">Copied!</div>
   </div>
-
-  <script>
-    // Tabs
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        tabContents.forEach(c => c.classList.remove('active'));
-        document.getElementById(btn.dataset.tab + '-tab').classList.add('active');
-      });
-    });
-
-    // Toast
-    const toast = document.getElementById('toast');
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 1800);
-    }
-
-    // Crypto-safe random
-    function randInt(max) {
-      if (window.crypto && crypto.getRandomValues) {
-        const buf = new Uint32Array(1);
-        crypto.getRandomValues(buf); // cryptographically strong randomness [9]
-        return buf % max; // simple reduction; acceptable for UI generator use-cases [1][5]
-      }
-      return Math.floor(Math.random() * max);
-    }
-
-    function shuffle(str) {
-      const arr = str.split('');
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = randInt(i + 1);
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr.join('');
-    }
-
-    function setStrength(mode, pct, color, label) {
-      const fill = document.getElementById('strength-fill-' + mode);
-      const indicator = document.getElementById('strength-indicator-' + mode);
-      fill.style.width = pct + '%';
-      fill.style.backgroundColor = color;
-      indicator.textContent = 'Strength: ' + label;
-      indicator.style.color = color;
-    }
-
-    function estimateStrength(len, diversity) {
-      if (len >= 14 && diversity >= 3) return { pct: 100, color: 'green', label: 'Strong' };
-      if (len >= 10 && diversity >= 2) return { pct: 65, color: 'orange', label: 'Medium' };
-      return { pct: 35, color: 'red', label: 'Weak' };
-    }
-
-    // ========== Random Mode ==========
-    const passwordRandom = document.getElementById('password-random');
-    const copyBtnRandom = document.getElementById('copy-btn-random');
-    const generateBtnRandom = document.getElementById('generate-btn-random');
-    const regenerateBtnRandom = document.getElementById('regenerate-btn-random');
-    const lengthSliderRandom = document.getElementById('length-slider-random');
-    const lengthValueRandom = document.getElementById('length-value-random');
-    const uppercaseChk = document.getElementById('uppercase');
-    const lowercaseChk = document.getElementById('lowercase');
-    const numbersChk = document.getElementById('numbers');
-    const symbolsChk = document.getElementById('symbols');
-
-    const uppercaseChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // exclude I,O [6]
-    const lowercaseChars = 'abcdefghijkmnopqrstuvwxyz'; // exclude l [6]
-    const numberChars   = '23456789'; // exclude 0,1 [6]
-    const symbolChars   = '@#$%^*()_+-=[]{}|;:,./<>?'; // exclude & [6]
-
-    lengthValueRandom.textContent = lengthSliderRandom.value;
-    lengthSliderRandom.addEventListener('input', () => {
-      lengthValueRandom.textContent = lengthSliderRandom.value;
-    });
-
-    function generateRandomPassword() {
-      const length = parseInt(lengthSliderRandom.value, 10);
-      let pools = [];
-      if (uppercaseChk.checked) pools.push(uppercaseChars);
-      if (lowercaseChk.checked) pools.push(lowercaseChars);
-      if (numbersChk.checked)   pools.push(numberChars);
-      if (symbolsChk.checked)   pools.push(symbolChars);
-
-      if (pools.length === 0) {
-        showToast('Select at least one character type');
-        return;
-      }
-
-      // Ensure at least one from each selected pool
-      let result = pools.map(set => set[randInt(set.length)]).join('');
-
-      // Fill remaining from all combined
-      const all = pools.join('');
-      for (let i = result.length; i < length; i++) {
-        result += all[randInt(all.length)];
-      }
-
-      // Shuffle to avoid grouping
-      result = shuffle(result);
-
-      passwordRandom.value = result;
-      const est = estimateStrength(length, pools.length);
-      setStrength('random', est.pct, est.color, est.label);
-    }
-
-    generateBtnRandom.addEventListener('click', generateRandomPassword);
-    regenerateBtnRandom.addEventListener('click', generateRandomPassword);
-    copyBtnRandom.addEventListener('click', () => {
-      if (!passwordRandom.value) return;
-      navigator.clipboard.writeText(passwordRandom.value);
-      showToast('Password copied!');
-    });
-
-    // ========== Words Mode ==========
-    const passwordWords = document.getElementById('password-words');
-    const copyBtnWords = document.getElementById('copy-btn-words');
-    const generateBtnWords = document.getElementById('generate-btn-words');
-    const regenerateBtnWords = document.getElementById('regenerate-btn-words');
-    const wordsInput = document.getElementById('words-input');
-    const wordCountSlider = document.getElementById('word-count-slider');
-    const wordCountValue = document.getElementById('word-count-value');
-    const separatorsChk = document.getElementById('separators');
-    const addNumbersChk = document.getElementById('add-numbers');
-    const capitalizeChk = document.getElementById('capitalize');
-
-    wordCountValue.textContent = wordCountSlider.value;
-    wordCountSlider.addEventListener('input', () => {
-      wordCountValue.textContent = wordCountSlider.value;
-    });
-
-    function generateWordPassphrase() {
-      let words = wordsInput.value.trim().split(/[\s,]+/).filter(Boolean);
-      if (words.length === 0) {
-        showToast('Enter words to generate a passphrase');
-        return;
-      }
-      const count = parseInt(wordCountSlider.value, 10);
-
-      let chosen = [];
-      for (let i = 0; i < count; i++) {
-        let w = words[randInt(words.length)];
-        if (capitalizeChk.checked) w = w.charAt(0).toUpperCase() + w.slice(1);
-        chosen.push(w);
-      }
-
-      const sep = separatorsChk.checked ? (randInt(2) === 0 ? '-' : '_') : '';
-      let pass = sep ? chosen.join(sep) : chosen.join('');
-
-      if (addNumbersChk.checked) {
-        pass += String(randInt(100));
-      }
-
-      passwordWords.value = pass;
-      const est = estimateStrength(pass.length, count >= 4 ? 3 : 2);
-      setStrength('words', est.pct, est.color, est.label);
-    }
-
-    generateBtnWords.addEventListener('click', generateWordPassphrase);
-    regenerateBtnWords.addEventListener('click', generateWordPassphrase);
-    copyBtnWords.addEventListener('click', () => {
-      if (!passwordWords.value) return;
-      navigator.clipboard.writeText(passwordWords.value);
-      showToast('Passphrase copied!');
-    });
-
-    // ========== Given Letters (Custom) ==========
-    const passwordCustom = document.getElementById('password-custom');
-    const copyBtnCustom = document.getElementById('copy-btn-custom');
-    const generateBtnCustom = document.getElementById('generate-btn-custom');
-    const regenerateBtnCustom = document.getElementById('regenerate-btn-custom');
-    const allowedLettersEl = document.getElementById('allowed-letters');
-    const mustIncludeEl = document.getElementById('must-include');
-    const lengthSliderCustom = document.getElementById('length-slider-custom');
-    const lengthValueCustom = document.getElementById('length-value-custom');
-    const avoidDupChk = document.getElementById('avoid-duplicates');
-    const shuffleResultChk = document.getElementById('shuffle-result');
-
-    lengthValueCustom.textContent = lengthSliderCustom.value;
-    lengthSliderCustom.addEventListener('input', () => {
-      lengthValueCustom.textContent = lengthSliderCustom.value;
-    });
-
-    function uniqueChars(str) {
-      return Array.from(new Set(str.split(''))).join('');
-    }
-
-    function generateFromGivenLetters() {
-      let allowed = (allowedLettersEl.value || '').replace(/\s+/g, '');
-      let required = (mustIncludeEl.value || '').replace(/\s+/g, '');
-
-      if (!allowed) {
-        showToast('Enter allowed letters/characters');
-        return;
-      }
-
-      allowed = uniqueChars(allowed);
-      required = uniqueChars(required);
-
-      // Validate required ⊆ allowed
-      for (const ch of required) {
-        if (!allowed.includes(ch)) {
-          showToast(`Required char "${ch}" not in allowed set`);
-          return;
-        }
-      }
-
-      const length = parseInt(lengthSliderCustom.value, 10);
-      const avoidDup = avoidDupChk.checked;
-
-      if (avoidDup && length > allowed.length) {
-        showToast('Length exceeds unique allowed characters');
-        return;
-      }
-      if (required.length > length) {
-        showToast('Length is less than number of required characters');
-        return;
-      }
-
-      // Start with required
-      let resultArr = required.split('');
-
-      // Build pool
-      let pool = allowed;
-      if (avoidDup) {
-        for (const ch of required) pool = pool.replace(ch, '');
-      }
-
-      while (resultArr.length < length) {
-        if (avoidDup) {
-          if (pool.length === 0) break;
-          const idx = randInt(pool.length);
-          resultArr.push(pool[idx]);
-          pool = pool.slice(0, idx) + pool.slice(idx + 1);
-        } else {
-          resultArr.push(allowed[randInt(allowed.length)]);
-        }
-      }
-
-      let result = resultArr.join('');
-      if (shuffleResultChk.checked) result = shuffle(result);
-
-      passwordCustom.value = result;
-
-      const usedUnique = new Set(result.split('')).size;
-      const diversity = usedUnique >= 10 ? 3 : usedUnique >= 5 ? 2 : 1;
-      const est = estimateStrength(result.length, diversity);
-      setStrength('custom', est.pct, est.color, est.label);
-    }
-
-    generateBtnCustom.addEventListener('click', generateFromGivenLetters);
-    regenerateBtnCustom.addEventListener('click', generateFromGivenLetters);
-    copyBtnCustom.addEventListener('click', () => {
-      if (!passwordCustom.value) return;
-      navigator.clipboard.writeText(passwordCustom.value);
-      showToast('Password copied!');
-    });
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
